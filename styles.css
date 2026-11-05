@@ -33,27 +33,20 @@ a { color: inherit; text-decoration: none; }
   position: relative; min-height: 100dvh; overflow: hidden;
   display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
   padding: calc(var(--seg-sup) + 24px) 24px calc(var(--seg-inf) + 32px);
-  background:
-    radial-gradient(ellipse 70% 40% at 50% 62%, rgba(143,211,255,.20), transparent 70%),
-    linear-gradient(#070a15 0%, var(--noche-2) 55%, #0c1226 100%);
+  background: #0a0f1f url("fondo-portada.svg") center / cover no-repeat;
   text-align: center;
 }
-.portada::before { /* columnas del salón, al fondo */
-  content: ""; position: absolute; inset: 0 0 18% 0; opacity: .55;
-  background: repeating-linear-gradient(90deg, #05070e 0 34px, transparent 34px 88px);
-  -webkit-mask-image: linear-gradient(#000 20%, transparent 92%);
-          mask-image: linear-gradient(#000 20%, transparent 92%);
-}
-.portada::after { /* suelo de piedra */
-  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 26%;
-  background: linear-gradient(transparent, #05070e 85%);
+.portada::after { /* oscurece abajo para que el texto se lea */
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 62%;
+  background: linear-gradient(transparent, rgba(5,7,14,.88) 60%);
 }
 .portada canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .portada > * { position: relative; z-index: 1; }
 
-.personajes { display: flex; align-items: flex-end; justify-content: center; gap: 4px; margin-bottom: 18px; }
-.personajes svg { width: 118px; height: auto; filter: drop-shadow(0 0 22px rgba(143,211,255,.25)); }
-.personajes .hornet { width: 88px; margin-left: -14px; opacity: .95; }
+.personajes { display: flex; align-items: flex-end; justify-content: center; margin-bottom: 14px; }
+.personajes img { height: auto; filter: drop-shadow(0 0 18px rgba(143,211,255,.22)); }
+.personajes .caballero { width: 150px; position: relative; z-index: 1; }
+.personajes .hornet { width: 146px; margin-left: -22px; }
 
 .portada h1 {
   font-family: var(--titulos); font-weight: 600; font-size: clamp(25px, 8vw, 36px);
@@ -115,7 +108,7 @@ a { color: inherit; text-decoration: none; }
 
 @media (min-width: 900px) {
   .portada { padding-bottom: 64px; }
-  .personajes svg { width: 150px; } .personajes .hornet { width: 112px; }
+  .personajes .caballero { width: 200px; } .personajes .hornet { width: 192px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .pantalla { animation: none; }

@@ -14,20 +14,9 @@
     return t.firstElementChild;
   }
 
-  /* ---------- Personajes temporales (se reemplazan por tus PNG/WebP) ---------- */
-  const CABALLERO = `<svg class="caballero" viewBox="0 0 120 170" role="img" aria-label="El Caballero">
-    <path d="M60 78 L16 164 L104 164 Z" fill="#05070d" stroke="#2b3b5e" stroke-width="2"/>
-    <path d="M34 36 Q22 6 44 12 M86 36 Q98 6 76 12" fill="none" stroke="#ece6d6" stroke-width="7" stroke-linecap="round"/>
-    <ellipse cx="60" cy="58" rx="33" ry="30" fill="#ece6d6"/>
-    <ellipse cx="48" cy="58" rx="8" ry="11" fill="#0a0f1f"/><ellipse cx="72" cy="58" rx="8" ry="11" fill="#0a0f1f"/>
-  </svg>`;
-  const HORNET = `<svg class="hornet" viewBox="0 0 120 170" role="img" aria-label="Hornet">
-    <path d="M60 78 L22 164 L98 164 Z" fill="#b3262e" stroke="#6e1218" stroke-width="2"/>
-    <path d="M44 34 Q50 4 52 -2 M76 34 Q70 4 68 -2" fill="none" stroke="#ece6d6" stroke-width="6" stroke-linecap="round"/>
-    <ellipse cx="60" cy="58" rx="26" ry="28" fill="#ece6d6"/>
-    <ellipse cx="50" cy="62" rx="7" ry="9" fill="#0a0f1f"/><ellipse cx="70" cy="62" rx="7" ry="9" fill="#0a0f1f"/>
-    <line x1="108" y1="40" x2="92" y2="164" stroke="#b9b4a6" stroke-width="3" stroke-linecap="round"/>
-  </svg>`;
+  /* ---------- Personajes (imágenes dentro de la carpeta) ---------- */
+  const CABALLERO = '<img class="caballero" src="nani.png" alt="Nani, el Caballero" width="318" height="280">';
+  const HORNET = '<img class="hornet" src="hornet.png" alt="Hornet" width="339" height="310">';
 
   /* ---------- Partículas suaves ---------- */
   function particulas(canvas) {
@@ -89,23 +78,22 @@
 
   function pantallaMapa() {
     const items = D.regiones.map(function (r) {
-      return `<li><span class="sombra">Región por descubrir</span><small>${r.zona}</small></li>`;
+      return `<li class="sombra"><span>${r.fantasia}</span><small>Por descubrir</small></li>`;
     }).join('');
     return interior('Mapa de Hallownest', 'Cada lugar deja un eco.',
-      `<ul class="lista">${items}</ul>
-       <p class="aviso">El mapa ilustrado y Hornet llegan en la Etapa 3. Por ahora esta es la estructura.</p>`);
+      `<ul class="lista">${items}</ul>`);
   }
   function pantallaMisiones() {
     return interior('Misiones', 'Opcionales, para hacer el viaje más entretenido.',
-      '<p class="aviso">Las misiones llegan en la Etapa 5.</p>');
+      '<p class="aviso">Todavía no hay misiones a la vista.</p>');
   }
   function pantallaRecuerdos() {
-    return interior('Recuerdos', 'Notas y fotografías de la bitácora.',
-      '<p class="aviso">La bitácora llega en la Etapa 5.</p>');
+    return interior('Recuerdos', 'Notas y fotografías de cada lugar.',
+      '<p class="aviso">Aquí se guardarán los recuerdos del viaje.</p>');
   }
   function pantallaProgreso() {
     return interior('El camino recorrido', 'Lo que hemos descubierto juntos.',
-      '<p class="aviso">La pantalla de progreso llega en la Etapa 5.</p>');
+      '<p class="aviso">El camino aún está por recorrer.</p>');
   }
 
   const rutas = { inicio: pantallaInicio, mapa: pantallaMapa, misiones: pantallaMisiones, recuerdos: pantallaRecuerdos, progreso: pantallaProgreso };
