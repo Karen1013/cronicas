@@ -1,6 +1,6 @@
 // Service Worker: guarda la app en el teléfono para que abra sin internet.
 // Si cambias cualquier archivo de la app, sube también este número de versión.
-const VERSION = 'v4';
+const VERSION = 'v5';
 const CACHE = 'cronicas-' + VERSION;
 
 const NUCLEO = [

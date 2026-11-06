@@ -13,12 +13,14 @@
   if (location.hash && location.hash !== '#/inicio') history.replaceState(null, '', location.pathname + location.search + '#/inicio');
 
   /* ======================= Progreso guardado ======================= */
-  let estado = { regiones: {}, fechas: {}, introVista: false };
+  let estado = { regiones: {}, fechas: {}, introVista: false, finalAnunciado: false };
   function guardar() { try { return Almacen.guardar('progreso', estado); } catch (e) {} }
   async function cargar() { try { const e = await Almacen.obtener('progreso'); if (e) estado = Object.assign(estado, e); } catch (e) {} }
   const reg = (id) => D.regiones.find((r) => r.id === id);
   function pendientes() { const o = D.orden.find((id) => !estado.regiones[id]); return o ? [o] : D.libres.filter((id) => !estado.regiones[id]); }
   function estadoDe(id) { if (estado.regiones[id]) return estado.regiones[id]; return pendientes().indexOf(id) >= 0 ? 'disponible' : 'oculta'; }
+  const TODAS = D.orden.concat(D.libres);
+  const todosDescubiertos = () => TODAS.every((id) => estado.regiones[id]);
   function ultimoDescubierto() {
     let mejor = null, t = '';
     Object.keys(estado.fechas).forEach((id) => { if (estado.regiones[id] && estado.fechas[id] > t) { t = estado.fechas[id]; mejor = id; } });
@@ -296,8 +298,8 @@
       if (st === 'disponible') return descubrir(id);
       ventanaInfo(id);
     }
-    function pop(id, W, ms, clase) {
-      const p = crear(`<div class="pop ${clase || ''}">${pj(id, W)}</div>`); el.appendChild(p);
+    function pop(id, W, ms, texto) {
+      const p = crear(`<div class="pop">${pj(id, W)}${texto ? `<p class="pop-txt">${texto}</p>` : ''}</div>`); el.appendChild(p);
       setTimeout(function () { p.classList.add('sale'); setTimeout(function () { p.remove(); }, 420); }, ms);
       return p;
     }
@@ -318,7 +320,7 @@
       estado.regiones[id] = 'descubierta'; estado.fechas[id] = new Date().toISOString(); guardar();
       pintarNodos();
       irA(r.x, r.y, Math.max(cam.s, minS * 1.8), 900);
-      pop('celebran', 'min(74vw,270px)', 1500);
+      pop('celebran', 'min(74vw,270px)', 1900, D.dialogos.descubrimiento);
       animarReveal(id, 1300, function () { nuevoId = null; progreso = 1; animando = false; pintarTodo(); pintarNodos(); setTimeout(function () { ventanaPista(id); }, 260); });
     }
 
@@ -333,17 +335,21 @@
       const m = modal(el, panelPj('cruzados', 170, `<p class="dialogo">«${D.dialogos.bloqueada}»</p>${placa('ENTENDIDO', 'ok')}`));
       m.querySelector('[data-acc="ok"]').addEventListener('click', function () { cerrarModal(m); });
     }
+    function infoRegion(r) {
+      return `<p class="eco">${r.titulo}</p><h2>${r.fantasia}</h2><p class="pista">«${r.pista}»</p><p class="nombre-real">(${r.real})</p>`;
+    }
     function ventanaPista(id) {
       const r = reg(id);
-      const m = modal(el, panelPj('hornet-senala', 118, `<p class="sello">REGIÓN DESCUBIERTA</p><h2>${r.fantasia}</h2><p class="eco">${r.titulo}</p>
-        <p class="pista">«${r.pista}»</p><p class="celebra">${D.dialogos.descubrimiento}</p>${placa('CONTINUAR CAMINO', 'sigue')}`));
-      m.querySelector('[data-acc="sigue"]').addEventListener('click', function () { cerrarModal(m, function () { enfocarGuia(1100); }); });
+      const m = modal(el, panelPj('hornet-senala', 118, `<p class="sello">REGIÓN DESCUBIERTA</p>${infoRegion(r)}${placa('CONTINUAR CAMINO', 'sigue')}`));
+      m.querySelector('[data-acc="sigue"]').addEventListener('click', function () {
+        cerrarModal(m, function () { if (todosDescubiertos() && !estado.finalAnunciado) ventanaFinalAnuncio(); else enfocarGuia(1100); });
+      });
     }
     function ventanaInfo(id) {
       const r = reg(id), st = estadoDe(id), k = .9;
       const m = modal(el, `<div class="panel">
         <div class="ilustracion"><div class="crop" style="--x:${r.x * k}px;--y:${r.y * k}px"></div></div>
-        <h2>${r.fantasia}</h2><p class="real">${r.real}</p><p class="pista">${r.intro}</p>
+        ${infoRegion(r)}
         <p class="estado ${st}">${st === 'completada' ? '◆ Explorada' : '◇ Descubierta'}</p>
         <div class="fila">${placa(st === 'completada' ? 'DESMARCAR' : 'MARCAR COMO EXPLORADA', 'toggle')}${placa('CERRAR', 'cerrar', 'suave')}</div></div>`);
       m.querySelector('[data-acc="cerrar"]').addEventListener('click', function () { cerrarModal(m); });
@@ -351,14 +357,26 @@
         estado.regiones[id] = st === 'completada' ? 'descubierta' : 'completada'; guardar(); pintarNodos();
         if (estado.regiones[id] === 'completada') {
           cerrarModal(m, function () {
-            pop('saltan', 'min(60vw,220px)', 1700);
-            const m2 = modal(el, `<div class="panel"><p class="dialogo">«${D.dialogos.completada}»</p>${placa('SEGUIR EXPLORANDO', 'ok')}</div>`);
-            m2.querySelector('[data-acc="ok"]').addEventListener('click', function () { cerrarModal(m2); });
+            pop('saltan', 'min(60vw,220px)', 1900, D.dialogos.completada);
           });
         } else cerrarModal(m);
       });
     }
+    /* Escena: Hornet y el Caballero anuncian el último destino (al descubrir todos los lugares) */
+    function ventanaFinalAnuncio() {
+      const ps = D.finalAnuncio.map(function (t, i, v) {
+        const txt = (i === 0 ? '«' : '') + t + (i === v.length - 1 ? '»' : '');
+        return `<p style="animation-delay:${(0.5 + i * 0.7).toFixed(1)}s">${txt}</p>`;
+      }).join('');
+      const m = modal(el, `<div class="dos-pj"><div class="flota">${pj('hornet-senala', 'min(36vw,150px)')}</div><div class="flota f2">${pj('nani-pregunta', 'min(31vw,130px)')}</div></div>
+        <div class="panel largo"><p class="sello">ÚLTIMO CAMINO</p><div class="dialogo-largo">${ps}</div>${placa('Sigue a Hornet', 'seguir')}</div>`, 'm-final');
+      m.querySelector('[data-acc="seguir"]').addEventListener('click', function () {
+        estado.finalAnunciado = true; guardar();
+        cerrarModal(m, function () { enfocarGuia(900); });
+      });
+    }
     function ventanaGuia() {
+      if (todosDescubiertos() && !estado.finalAnunciado) return ventanaFinalAnuncio();
       const p = pendientes();
       const m = modal(el, panelPj('hornet-senala', 118, `<p class="dialogo">«${p.length ? D.dialogos.guia : D.dialogos.fin}»</p>${placa('ENTENDIDO', 'ok')}`));
       m.querySelector('[data-acc="ok"]').addEventListener('click', function () { cerrarModal(m, function () { if (p.length) enfocarGuia(1100); }); });
@@ -374,7 +392,7 @@
         const NOM = { oculta: 'Oculta', disponible: 'Oculta', descubierta: 'Descubierta', completada: 'Completada' };
         function filas() { return D.regiones.map((r) => `<div class="adm-fila"><span>${r.real}</span><button type="button" class="boton placa suave mini" data-id="${r.id}">${NOM[estadoDe(r.id)]}</button></div>`).join(''); }
         const m = modal(el, `<div class="panel admin"><h2>Administración</h2><p class="pista">Toca una región para cambiar su estado: oculta → descubierta → completada.</p>
-          <div id="admLista">${filas()}</div><div class="fila">${placa('REPETIR MENSAJE INICIAL', 'intro', 'suave')}${placa('REINICIAR TODO', 'reset', 'suave')}${placa('CERRAR', 'cerrar')}</div></div>`);
+          <div id="admLista">${filas()}</div><div class="fila">${placa('DESCUBRIR TODAS (PRUEBA)', 'todas', 'suave')}${placa('REPETIR ESCENA FINAL', 'final', 'suave')}${placa('REPETIR MENSAJE INICIAL', 'intro', 'suave')}${placa('REINICIAR TODO', 'reset', 'suave')}${placa('CERRAR', 'cerrar')}</div></div>`);
         m.addEventListener('click', function (e) {
           const b = e.target.closest('button'); if (!b) return;
           if (b.dataset.id) {
@@ -382,8 +400,10 @@
             if (!st) { estado.regiones[id] = 'descubierta'; estado.fechas[id] = new Date().toISOString(); } else if (st === 'descubierta') estado.regiones[id] = 'completada'; else { delete estado.regiones[id]; delete estado.fechas[id]; }
             guardar(); pintarTodo(); pintarNodos(); m.querySelector('#admLista').innerHTML = filas();
           } else if (b.dataset.acc === 'intro') { estado.introVista = false; guardar(); b.textContent = 'LISTO'; }
+          else if (b.dataset.acc === 'todas') { TODAS.forEach(function (id) { if (!estado.regiones[id]) { estado.regiones[id] = 'descubierta'; estado.fechas[id] = new Date().toISOString(); } }); guardar(); pintarTodo(); pintarNodos(); m.querySelector('#admLista').innerHTML = filas(); b.textContent = 'LISTO'; }
+          else if (b.dataset.acc === 'final') { estado.finalAnunciado = false; guardar(); cerrarModal(m, function () { if (todosDescubiertos()) ventanaFinalAnuncio(); }); }
           else if (b.dataset.acc === 'reset') {
-            if (b.dataset.seguro) { estado = { regiones: {}, fechas: {}, introVista: false }; guardar(); pintarTodo(); pintarNodos(); m.querySelector('#admLista').innerHTML = filas(); b.textContent = 'REINICIADO'; delete b.dataset.seguro; }
+            if (b.dataset.seguro) { estado = { regiones: {}, fechas: {}, introVista: false, finalAnunciado: false }; guardar(); pintarTodo(); pintarNodos(); m.querySelector('#admLista').innerHTML = filas(); b.textContent = 'REINICIADO'; delete b.dataset.seguro; }
             else { b.dataset.seguro = '1'; b.textContent = 'TOCA OTRA VEZ PARA CONFIRMAR'; }
           } else if (b.dataset.acc === 'cerrar') cerrarModal(m);
         });
@@ -397,6 +417,7 @@
       pintarTodo(); listo = true; cv.classList.add('lista');
       if (!introEstaSesion && pendientes().length) { introEstaSesion = true; setTimeout(function () { ventanaIntro(estado.introVista ? 'intro2' : 'intro1'); }, reducir ? 0 : 650); }
       else if (pendientes().length) enfocarGuia(0);
+      if (todosDescubiertos() && !estado.finalAnunciado) setTimeout(ventanaFinalAnuncio, reducir ? 0 : 650);
     });
   }
 

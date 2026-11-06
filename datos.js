@@ -80,6 +80,15 @@ window.DATOS = {
     mallplaza: 'M585 566 L702 566 L702 520'
   },
 
+  // Escena de Hornet y el Caballero al completar todos los destinos (se puede editar libremente).
+  finalAnuncio: [
+    'Pequeño Caballero, hemos recorrido juntos caminos desconocidos, atravesado tierras misteriosas y descubierto rincones que parecían existir únicamente en las leyendas.',
+    'Espero que hayas disfrutado cada paso de esta travesía, porque cada lugar que hemos visitado guarda un pequeño recuerdo de nuestra aventura.',
+    'Pero no creas que nuestro viaje ha terminado…',
+    'Todavía nos espera un último rincón por descubrir. Un lugar que no encontrarás en los mapas antiguos ni en las historias de Hallownest.',
+    'Ven, sígueme una vez más. Esta última sorpresa no se encuentra entre montañas ni caminos lejanos… sino en un lugar donde te esperan quienes han querido formar parte de tu historia.'
+  ],
+
   dialogos: {
     intro1: 'Pequeño viajero, no todos los caminos están abiertos todavía. Sígueme y descubriremos juntos los secretos que guarda este reino.',
     intro2: 'Pequeño viajero, aún faltan caminos por abrir. Sígueme y descubriremos juntos los secretos que faltan en este reino.',
