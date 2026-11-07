@@ -62,7 +62,10 @@ window.DATOS = {
     { id: 'mallplaza', real: 'Mallplaza', fantasia: 'El refugio de los viajeros', titulo: 'ECOS DEL REFUGIO',
       pista: 'Cuando el camino pide una pausa, existe un refugio de luces, aromas y mesas compartidas. Un lugar para descansar antes de seguir.',
       intro: 'Centro comercial con gastronomía, tiendas, entretenimiento y espacios para compartir.',
-      x: 702, y: 512, reveal: 120, etq: [0, 98] }
+      x: 702, y: 512, reveal: 120, etq: [0, 98] },
+    { id: 'santuario', real: 'El Reposo de Joni', fantasia: 'El santuario de las alas dormidas', titulo: 'ECOS DE LAS ALAS',
+      pista: 'Más allá de las tierras recorridas y de los caminos que el Caballero ha logrado descubrir, existe un pequeño santuario donde el tiempo parece detenerse.\n\nEntre antiguas rocas, delicados cristales y mariposas que descansan en silencio, se encuentra un refugio reservado para quienes han llegado al final de su travesía.\n\nAquí no hay nuevos caminos que conquistar ni territorios que explorar. Solo un lugar donde las alas encuentran descanso y donde cada viajero puede detenerse a contemplar todo aquello que ha recorrido.\n\nPequeño Caballero, has llegado al último rincón de este mundo. Es momento de descansar y descubrir lo que este santuario guarda para ti.',
+      intro: '', x: 400, y: 2165, reveal: 270, etq: [0, 128] }
   ],
 
   // Caminos que se encienden en dorado cuando se descubre cada lugar.
@@ -77,7 +80,8 @@ window.DATOS = {
     catedral: 'M430 566 L265 566 L265 450',
     caldas27: 'M265 566 L105 566 L105 520',
     cable: 'M430 566 L472 520 L585 420',
-    mallplaza: 'M585 566 L702 566 L702 520'
+    mallplaza: 'M585 566 L702 566 L702 520',
+    santuario: 'M650 1600 C650 1690 620 1760 560 1840 C500 1910 440 1980 412 2050 C402 2100 400 2135 400 2160'
   },
 
   // Escena de Hornet y el Caballero al completar todos los destinos (se puede editar libremente).
@@ -85,9 +89,31 @@ window.DATOS = {
     'Pequeño Caballero, hemos recorrido juntos caminos desconocidos, atravesado tierras misteriosas y descubierto rincones que parecían existir únicamente en las leyendas.',
     'Espero que hayas disfrutado cada paso de esta travesía, porque cada lugar que hemos visitado guarda un pequeño recuerdo de nuestra aventura.',
     'Pero no creas que nuestro viaje ha terminado…',
-    'Todavía nos espera un último rincón por descubrir. Un lugar que no encontrarás en los mapas antiguos ni en las historias de Hallownest.',
-    'Ven, sígueme una vez más. Esta última sorpresa no se encuentra entre montañas ni caminos lejanos… sino en un lugar donde te esperan quienes han querido formar parte de tu historia.'
+    'Más allá de las tierras que hemos recorrido, existe un último territorio que permanece oculto, un rincón que no aparece en los mapas antiguos ni en las historias de Hallownest.',
+    'Sus caminos aún esperan ser descubiertos y sus secretos permanecen bajo un velo de niebla.',
+    'Ven, sígueme una vez más, pequeño Caballero. Todavía nos queda un último lugar por descubrir.'
   ],
+
+
+  // Carta final de Hornet (cada elemento es un párrafo; los dos últimos forman la firma).
+  carta: [
+    'Pequeño Caballero…',
+    'Hemos llegado al final de esta travesía. Juntos recorrimos tierras desconocidas, descubrimos rincones escondidos y seguimos caminos que nos llevaron mucho más lejos de lo que imaginábamos.',
+    'Cada lugar dejó una huella, cada paisaje nos regaló un instante y cada pequeño descubrimiento se convirtió en un eco que permanecerá con nosotros incluso cuando regresemos a casa.',
+    'Pero quiero que recuerdes algo…',
+    'Por más grandes que sean los reinos que recorras, por más lejos que te lleven tus pasos y por más difíciles que parezcan algunos caminos, nunca olvides que no tienes que recorrerlos solo.',
+    'Existen personas que te quieren, que creen en ti, que celebran tus alegrías y que desean verte alcanzar cada uno de tus sueños.',
+    'Personas que estarán a tu lado cuando el camino sea tranquilo, pero también cuando lleguen las tormentas, cuando aparezcan nuevos desafíos o cuando no sepas qué dirección tomar.',
+    'Quiero que nunca dudes de cuánto te aman, de cuánto te apoyan y de lo importante que eres para cada una de ellas.',
+    'Y recuerda, Caballero: aquí también estará Hornet. Para acompañarte en cada paso, esperarte en cada nuevo sendero, caminar contigo por tierras desconocidas y celebrar a tu lado cada pequeña victoria.',
+    'Porque si algo he aprendido durante esta aventura, es que los mejores viajes no se recuerdan únicamente por los lugares que visitamos, sino por las personas con quienes compartimos el camino.',
+    'Gracias por permitirme acompañarte en este viaje.',
+    'Y si alguna vez vuelves a perderte entre los caminos de este mundo, solo tendrás que recordar que siempre habrá alguien dispuesto a encontrarte y caminar a tu lado una vez más.',
+    'Con cariño,',
+    'Hornet'
+  ],
+  fraseFinal: 'La aventura termina, pero los ecos de este viaje permanecerán para siempre',
+  tituloFinal: 'Crónicas de un pequeño viajero',
 
   dialogos: {
     intro1: 'Pequeño viajero, no todos los caminos están abiertos todavía. Sígueme y descubriremos juntos los secretos que guarda este reino.',

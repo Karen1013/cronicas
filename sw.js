@@ -1,12 +1,12 @@
 // Service Worker: guarda la app en el teléfono para que abra sin internet.
 // Si cambias cualquier archivo de la app, sube también este número de versión.
-const VERSION = 'v5';
+const VERSION = 'v6';
 const CACHE = 'cronicas-' + VERSION;
 
 const NUCLEO = [
   './', 'index.html', 'styles.css', 'datos.js', 'personajes.js', 'almacen.js', 'app.js',
   'manifest.json', 'icon-180.png', 'icon-192.png', 'icon-512.png',
-  'fondo-portada.svg', 'personajes.webp', 'mapa-gris.webp', 'mapa-color.webp'
+  'fondo-portada.svg', 'personajes.webp', 'mapa-gris.webp', 'mapa-color.webp', 'santuario-escena.webp', 'niebla.webp'
 ];
 // Archivos que se añadirán después (si aún no existen, no pasa nada).
 const OPCIONALES = ['fuente-titulos.woff2', 'fuente-texto.woff2'];

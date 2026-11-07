@@ -13,11 +13,17 @@
   if (location.hash && location.hash !== '#/inicio') history.replaceState(null, '', location.pathname + location.search + '#/inicio');
 
   /* ======================= Progreso guardado ======================= */
-  let estado = { regiones: {}, fechas: {}, introVista: false, finalAnunciado: false };
+  const nuevoEstado = () => ({ regiones: {}, fechas: {}, introVista: false, finalAnunciado: false, santuarioVisible: false, finalCompleto: false });
+  let estado = nuevoEstado();
+  const MH = 2400; // alto del mapa (el territorio final está debajo del Nevado)
   function guardar() { try { return Almacen.guardar('progreso', estado); } catch (e) {} }
   async function cargar() { try { const e = await Almacen.obtener('progreso'); if (e) estado = Object.assign(estado, e); } catch (e) {} }
   const reg = (id) => D.regiones.find((r) => r.id === id);
-  function pendientes() { const o = D.orden.find((id) => !estado.regiones[id]); return o ? [o] : D.libres.filter((id) => !estado.regiones[id]); }
+  function pendientes() {
+    const o = D.orden.find((id) => !estado.regiones[id]); if (o) return [o];
+    const l = D.libres.filter((id) => !estado.regiones[id]); if (l.length) return l;
+    return (estado.santuarioVisible && !estado.regiones.santuario) ? ['santuario'] : [];
+  }
   function estadoDe(id) { if (estado.regiones[id]) return estado.regiones[id]; return pendientes().indexOf(id) >= 0 ? 'disponible' : 'oculta'; }
   const TODAS = D.orden.concat(D.libres);
   const todosDescubiertos = () => TODAS.every((id) => estado.regiones[id]);
@@ -155,7 +161,7 @@
     const el = crear(`<main class="reino">
       <div class="mapa-vista" id="vista">
         <div class="mapa-lienzo" id="lienzo">
-          <canvas id="mapaCanvas" width="1600" height="3400"></canvas>
+          <canvas id="mapaCanvas" width="1600" height="4800"></canvas>
           <div class="nodos" id="nodos"></div>
         </div>
       </div>
@@ -168,14 +174,33 @@
     return el;
   }
 
+  // Mariposas: se mueven solo con transform (suave y ligero)
+  function rnd(sem) { let s = sem; return function () { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; }
+  function mariposasMapa() {
+    const R = rnd(31); let s = '';
+    for (let i = 0; i < 16; i++) {
+      const x = 190 + R() * 420, y = 2020 + R() * 250, dx = (R() - .5) * 90, dy = -20 - R() * 80, d = 6 + R() * 6, r = -R() * 6;
+      s += `<div class="mar-pos" style="left:${x.toFixed(0)}px;top:${y.toFixed(0)}px"><div class="mar" style="--dx:${dx.toFixed(0)}px;--dy:${dy.toFixed(0)}px;--d:${d.toFixed(1)}s;--r:${r.toFixed(1)}s"><b style="animation-delay:${(-R()).toFixed(2)}s"></b></div></div>`;
+    }
+    return s;
+  }
+  function mariposasSuben(cont, n) {
+    const R = rnd(77); let s = '';
+    for (let i = 0; i < n; i++) {
+      s += `<div class="ms" style="left:${(4 + R() * 92).toFixed(0)}%;bottom:${(8 + R() * 40).toFixed(0)}%;--d:${(8 + R() * 7).toFixed(1)}s;--r:${(-R() * 12).toFixed(1)}s"><div class="mar" style="--dx:${((R() - .5) * 60).toFixed(0)}px;--dy:0px;--d:${(2.4 + R() * 2).toFixed(1)}s"><b style="animation-delay:${(-R()).toFixed(2)}s"></b></div></div>`;
+    }
+    cont.innerHTML = s;
+  }
+
   function iniciarReino(el) {
     const vista = el.querySelector('#vista'), lienzo = el.querySelector('#lienzo'), cv = el.querySelector('#mapaCanvas'), nodos = el.querySelector('#nodos');
-    const ctx = cv.getContext('2d'), S = 2;
+    const ctx = cv.getContext('2d'), S = 2, yLim = 1700 * S;
     const cam = { s: 1, x: 0, y: 0 };
-    let minS = .4, maxS = 3, nuevoId = null, progreso = 1, animando = false, tween = 0, listo = false, pend = false;
+    let minS = .3, maxS = 3, fitW = .5, nuevoId = null, progreso = 1, animando = false, tween = 0, listo = false, pend = false;
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
     const tmp = document.createElement('canvas'), tctx = tmp.getContext('2d');
     el.querySelector('#btnInicio').addEventListener('click', function () { location.hash = '#/inicio'; });
+    const vistaGeneral = () => Math.min(fitW, vista.clientHeight / 1950);
 
     /* ---- dibujo del mapa: gris de base y color donde ya se descubrió ---- */
     function revelar(r, f) {
@@ -202,22 +227,30 @@
     }
     function pintarCaja(x0, y0, x1, y1) {
       x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0)); x1 = Math.min(cv.width, Math.ceil(x1)); y1 = Math.min(cv.height, Math.ceil(y1));
-      ctx.drawImage(IMGS.gris, x0, y0, x1 - x0, y1 - y0, x0, y0, x1 - x0, y1 - y0);
-      ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.clip();
-      D.regiones.forEach(function (r) { if (estado.regiones[r.id]) revelar(r, r.id === nuevoId ? progreso : 1); });
-      ctx.restore(); caminos(x0, y0, x1, y1);
+      if (!estado.santuarioVisible) y1 = Math.min(y1, yLim);   // el último territorio no existe hasta que la niebla lo revela
+      if (x1 <= x0 || y1 <= y0) return;
+      ctx.clearRect(x0, y0, x1 - x0, y1 - y0);
+      ctx.drawImage(estado.finalCompleto ? IMGS.color : IMGS.gris, x0, y0, x1 - x0, y1 - y0, x0, y0, x1 - x0, y1 - y0);
+      if (!estado.finalCompleto) {
+        ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.clip();
+        D.regiones.forEach(function (r) { if (estado.regiones[r.id]) revelar(r, r.id === nuevoId ? progreso : 1); });
+        ctx.restore();
+      }
+      caminos(x0, y0, x1, y1);
     }
-    const pintarTodo = () => pintarCaja(0, 0, cv.width, cv.height);
+    const pintarTodo = () => { ctx.clearRect(0, 0, cv.width, cv.height); pintarCaja(0, 0, cv.width, cv.height); };
 
-    /* ---- nodos, nombres y fichas de Nani y Hornet (HTML: suave al mover el mapa) ---- */
+    /* ---- nodos, nombres, fichas y mariposas (HTML: suave al mover el mapa) ---- */
     function pintarNodos() {
       const ult = ultimoDescubierto(), pend = pendientes(), nr = ult ? reg(ult) : null;
       let s = '';
       D.regiones.forEach(function (r) {
+        if (r.id === 'santuario' && !estado.santuarioVisible) return;
         const st = estadoDe(r.id);
         const etq = (st === 'descubierta' || st === 'completada') ? `<span class="etq" style="margin-left:${r.etq[0]}px;top:calc(50% + ${r.etq[1]}px)">${lineas(r.fantasia).join('<br>')}</span>` : '';
         s += `<button type="button" class="nodo ${st}${r.id === nuevoId ? ' descubriendo' : ''}" data-region="${r.id}" style="left:${r.x}px;top:${r.y}px" aria-label="${st === 'oculta' ? 'Región por descubrir' : r.fantasia}"><i class="halo"></i><i class="halo h2"></i><i class="rombo"></i>${st === 'completada' ? '<i class="emb"></i>' : ''}${etq}</button>`;
       });
+      if (estado.regiones.santuario) s += mariposasMapa();
       s += `<div class="ficha" style="left:${nr ? nr.x - 52 : 362}px;top:${nr ? nr.y - 16 : 566}px">${pj('nani-pregunta', 86)}</div>`;
       if (pend.length) { const hr = reg(pend[0]); s += `<div class="ficha" style="left:${hr.x + 58}px;top:${hr.y - 16}px"><div class="bob">${pj('hornet-senala', 98)}</div></div>`; }
       nodos.innerHTML = s;
@@ -229,7 +262,7 @@
       requestAnimationFrame(function () { pend = false; lienzo.style.transform = `translate3d(${cam.x}px,${cam.y}px,0) scale(${cam.s})`; });
     }
     function limitar() {
-      const vw = vista.clientWidth, vh = vista.clientHeight, w = 800 * cam.s, h = 1700 * cam.s;
+      const vw = vista.clientWidth, vh = vista.clientHeight, w = 800 * cam.s, h = MH * cam.s;
       cam.x = w <= vw ? (vw - w) / 2 : clamp(cam.x, vw - w, 0);
       cam.y = h <= vh ? (vh - h) / 2 : clamp(cam.y, vh - h, 0);
     }
@@ -238,7 +271,7 @@
       cancelAnimationFrame(tween);
       const vw = vista.clientWidth, vh = vista.clientHeight, ns = clamp(s, minS, maxS);
       let tx = vw / 2 - mx * ns, ty = vh * .42 - my * ns;
-      const w = 800 * ns, h = 1700 * ns;
+      const w = 800 * ns, h = MH * ns;
       tx = w <= vw ? (vw - w) / 2 : clamp(tx, vw - w, 0); ty = h <= vh ? (vh - h) / 2 : clamp(ty, vh - h, 0);
       if (!ms || reducir) { cam.s = ns; cam.x = tx; cam.y = ty; aplicar(); return; }
       const a = { s: cam.s, x: cam.x, y: cam.y }, t0 = performance.now();
@@ -249,7 +282,7 @@
         if (k < 1) tween = requestAnimationFrame(paso);
       })(t0);
     }
-    function medir() { minS = vista.clientWidth / 800; maxS = minS * 3.2; cam.s = clamp(cam.s, minS, maxS); limitar(); aplicar(); }
+    function medir() { fitW = vista.clientWidth / 800; minS = Math.min(fitW, vista.clientHeight / 1950); maxS = fitW * 3.2; cam.s = clamp(cam.s, minS, maxS); limitar(); aplicar(); }
     cam.s = vista.clientWidth / 800; medir();
     let rt = 0; const alCambiar = function () { clearTimeout(rt); rt = setTimeout(medir, 120); };
     window.addEventListener('resize', alCambiar);
@@ -258,6 +291,7 @@
     /* ---- gestos ---- */
     const ptrs = new Map(); let movido = 0, previo = null, t0 = null;
     vista.addEventListener('pointerdown', function (e) {
+      if (animando) return;
       cancelAnimationFrame(tween); try { vista.setPointerCapture(e.pointerId); } catch (x) {}
       ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); movido = 0; previo = null;
       if (ptrs.size === 1) t0 = { t: Date.now() };
@@ -282,14 +316,14 @@
       }
     }
     vista.addEventListener('pointerup', fin); vista.addEventListener('pointercancel', fin);
-    vista.addEventListener('wheel', function (e) { e.preventDefault(); cancelAnimationFrame(tween); const r = vista.getBoundingClientRect(); zoomEn(e.clientX - r.left, e.clientY - r.top, e.deltaY < 0 ? 1.12 : .89); }, { passive: false });
+    vista.addEventListener('wheel', function (e) { e.preventDefault(); if (animando) return; cancelAnimationFrame(tween); const r = vista.getBoundingClientRect(); zoomEn(e.clientX - r.left, e.clientY - r.top, e.deltaY < 0 ? 1.12 : .89); }, { passive: false });
     el.querySelector('#zmas').addEventListener('click', function () { zoomEn(vista.clientWidth / 2, vista.clientHeight / 2, 1.4); });
     el.querySelector('#zmenos').addEventListener('click', function () { zoomEn(vista.clientWidth / 2, vista.clientHeight / 2, .72); });
 
     /* ---- acciones ---- */
     function enfocarGuia(ms) {
       const p = pendientes();
-      if (p.length === 1) { const r = reg(p[0]); irA(r.x, r.y, minS * 1.9, ms); } else irA(400, 480, minS * 1.5, ms);
+      if (p.length === 1) { const r = reg(p[0]); irA(r.x, r.y, fitW * (p[0] === 'santuario' ? 1.5 : 1.9), ms); } else irA(400, 480, fitW * 1.5, ms);
     }
     function tocar(id) {
       if (animando || !listo) return;
@@ -319,11 +353,12 @@
       const r = reg(id); animando = true; nuevoId = id; progreso = 0;
       estado.regiones[id] = 'descubierta'; estado.fechas[id] = new Date().toISOString(); guardar();
       pintarNodos();
-      irA(r.x, r.y, Math.max(cam.s, minS * 1.8), 900);
+      irA(r.x, r.y, Math.max(cam.s, fitW * 1.8), 900);
       pop('celebran', 'min(74vw,270px)', 1900, D.dialogos.descubrimiento);
-      animarReveal(id, 1300, function () { nuevoId = null; progreso = 1; animando = false; pintarTodo(); pintarNodos(); setTimeout(function () { ventanaPista(id); }, 260); });
+      animarReveal(id, id === 'santuario' ? 2400 : 1300, function () { nuevoId = null; progreso = 1; animando = false; pintarTodo(); pintarNodos(); setTimeout(function () { ventanaPista(id); }, 260); });
     }
 
+    /* ---- ventanas ---- */
     function ventanaIntro(fraseId) {
       const m = modal(el, `<div class="intro-pj">${pj('caminan-senala', 'min(74vw,300px)')}</div><div class="panel"><p class="dialogo">«${D.dialogos[fraseId]}»</p>${placa('¡Sigue a Hornet!', 'seguir')}</div>`, 'm-intro');
       m.querySelector('[data-acc="seguir"]').addEventListener('click', function () {
@@ -336,33 +371,37 @@
       m.querySelector('[data-acc="ok"]').addEventListener('click', function () { cerrarModal(m); });
     }
     function infoRegion(r) {
-      return `<p class="eco">${r.titulo}</p><h2>${r.fantasia}</h2><p class="pista">«${r.pista}»</p><p class="nombre-real">(${r.real})</p>`;
+      const ps = r.pista.split('\n\n').map(function (t, i, v) { return `<p class="pista">${i === 0 ? '«' : ''}${t}${i === v.length - 1 ? '»' : ''}</p>`; }).join('');
+      return `<p class="eco">${r.titulo}</p><h2>${r.fantasia}</h2>${ps}<p class="nombre-real">(${r.real})</p>`;
     }
     function ventanaPista(id) {
       const r = reg(id);
+      if (id === 'santuario') {
+        const m = modal(el, `<div class="panel largo alto"><div class="dialogo-largo"><div class="ilustracion"><div class="foto" style="background-image:url(santuario-escena.webp)"></div></div><p class="sello">TERRITORIO DESCUBIERTO</p>${infoRegion(r)}</div>${placa('CONTINUAR', 'sigue')}</div>`);
+        m.querySelector('[data-acc="sigue"]').addEventListener('click', function () { cerrarModal(m, function () { escenaFinal(false); }); });
+        return;
+      }
       const m = modal(el, panelPj('hornet-senala', 118, `<p class="sello">REGIÓN DESCUBIERTA</p>${infoRegion(r)}${placa('CONTINUAR CAMINO', 'sigue')}`));
       m.querySelector('[data-acc="sigue"]').addEventListener('click', function () {
         cerrarModal(m, function () { if (todosDescubiertos() && !estado.finalAnunciado) ventanaFinalAnuncio(); else enfocarGuia(1100); });
       });
     }
     function ventanaInfo(id) {
-      const r = reg(id), st = estadoDe(id), k = .9;
-      const m = modal(el, `<div class="panel">
-        <div class="ilustracion"><div class="crop" style="--x:${r.x * k}px;--y:${r.y * k}px"></div></div>
-        ${infoRegion(r)}
-        <p class="estado ${st}">${st === 'completada' ? '◆ Explorada' : '◇ Descubierta'}</p>
-        <div class="fila">${placa(st === 'completada' ? 'DESMARCAR' : 'MARCAR COMO EXPLORADA', 'toggle')}${placa('CERRAR', 'cerrar', 'suave')}</div></div>`);
+      const r = reg(id), st = estadoDe(id), k = .9, esS = id === 'santuario';
+      const ilus = esS ? '<div class="ilustracion"><div class="foto" style="background-image:url(santuario-escena.webp)"></div></div>' : `<div class="ilustracion"><div class="crop" style="--x:${r.x * k}px;--y:${r.y * k}px"></div></div>`;
+      const botones = esS
+        ? placa(estado.finalCompleto ? 'VOLVER A LEER LA CARTA' : 'CONTINUAR', 'carta') + placa('CERRAR', 'cerrar', 'suave')
+        : placa(st === 'completada' ? 'DESMARCAR' : 'MARCAR COMO EXPLORADA', 'toggle') + placa('CERRAR', 'cerrar', 'suave');
+      const m = modal(el, `<div class="panel largo alto"><div class="dialogo-largo">${ilus}${infoRegion(r)}<p class="estado ${st}">${st === 'completada' ? '◆ Explorada' : '◇ Descubierta'}</p></div><div class="fila">${botones}</div></div>`);
       m.querySelector('[data-acc="cerrar"]').addEventListener('click', function () { cerrarModal(m); });
+      if (esS) { m.querySelector('[data-acc="carta"]').addEventListener('click', function () { cerrarModal(m, function () { escenaFinal(!!estado.finalCompleto); }); }); return; }
       m.querySelector('[data-acc="toggle"]').addEventListener('click', function () {
         estado.regiones[id] = st === 'completada' ? 'descubierta' : 'completada'; guardar(); pintarNodos();
-        if (estado.regiones[id] === 'completada') {
-          cerrarModal(m, function () {
-            pop('saltan', 'min(60vw,220px)', 1900, D.dialogos.completada);
-          });
-        } else cerrarModal(m);
+        if (estado.regiones[id] === 'completada') cerrarModal(m, function () { pop('saltan', 'min(60vw,220px)', 1900, D.dialogos.completada); });
+        else cerrarModal(m);
       });
     }
-    /* Escena: Hornet y el Caballero anuncian el último destino (al descubrir todos los lugares) */
+    /* Escena: Hornet y el Caballero anuncian el último territorio */
     function ventanaFinalAnuncio() {
       const ps = D.finalAnuncio.map(function (t, i, v) {
         const txt = (i === 0 ? '«' : '') + t + (i === v.length - 1 ? '»' : '');
@@ -370,14 +409,79 @@
       }).join('');
       const m = modal(el, `<div class="dos-pj"><div class="flota">${pj('hornet-senala', 'min(36vw,150px)')}</div><div class="flota f2">${pj('nani-pregunta', 'min(31vw,130px)')}</div></div>
         <div class="panel largo"><p class="sello">ÚLTIMO CAMINO</p><div class="dialogo-largo">${ps}</div>${placa('Sigue a Hornet', 'seguir')}</div>`, 'm-final');
-      m.querySelector('[data-acc="seguir"]').addEventListener('click', function () {
-        estado.finalAnunciado = true; guardar();
-        cerrarModal(m, function () { enfocarGuia(900); });
+      m.querySelector('[data-acc="seguir"]').addEventListener('click', function () { cerrarModal(m, secuenciaSantuario); });
+    }
+
+    /* Desplazamiento hacia abajo, niebla y nubes, y aparición del último territorio */
+    function secuenciaSantuario() {
+      animando = true;
+      const nb = crear('<div class="niebla"><div class="nb-base"></div><div class="capa c1"></div><div class="capa c2"></div><div class="capa c3"></div></div>');
+      el.appendChild(nb);
+      irA(400, 2060, fitW * 1.5, reducir ? 0 : 3800);
+      setTimeout(function () { nb.classList.add('cubre'); }, reducir ? 0 : 700);
+      setTimeout(function () {
+        estado.finalAnunciado = true; estado.santuarioVisible = true; guardar();
+        pintarTodo(); pintarNodos(); nb.classList.remove('cubre'); nb.classList.add('despeja');
+      }, reducir ? 100 : 4800);
+      setTimeout(function () { nb.remove(); animando = false; pop('caminan-senala', 'min(70vw,260px)', 2400); }, reducir ? 400 : 8800);
+    }
+
+    /* Escena de descanso + carta de despedida */
+    function escenaFinal(soloLeer) {
+      const parrafos = D.carta.slice(0, -2).map(function (t, i) { return `<p style="animation-delay:${(0.5 + i * 0.6).toFixed(1)}s">${t}</p>`; }).join('');
+      const n = D.carta.length;
+      const firma = `<p class="firma" style="animation-delay:${(0.5 + (n - 2) * 0.6).toFixed(1)}s">${D.carta[n - 2]}<br><span>${D.carta[n - 1]}</span></p>`;
+      const e = crear(`<div class="escena-final">
+        <div class="ef-fondo"></div><div class="ef-calida"></div><div class="ef-mar"></div>
+        <div class="ef-pj"><div class="flota">${pj('contemplan', 'min(86vw,350px)')}</div></div>
+        <button class="boton placa ef-abrir" type="button" data-acc="abrir">ABRIR LA CARTA</button>
+        <div class="ef-carta"><div class="ef-texto">${parrafos}${firma}</div><button class="boton placa" type="button" data-acc="cierra">${soloLeer ? 'CERRAR LA CARTA' : 'CONTINUAR'}</button></div>
+      </div>`);
+      el.appendChild(e);
+      mariposasSuben(e.querySelector('.ef-mar'), 22);
+      requestAnimationFrame(function () { requestAnimationFrame(function () { e.classList.add('visible'); }); });
+      const abrir = function () { e.classList.add('con-carta'); e.querySelector('.ef-abrir').classList.add('oculto'); };
+      e.querySelector('[data-acc="abrir"]').addEventListener('click', abrir);
+      setTimeout(function () { e.classList.add('listo'); if (soloLeer) abrir(); }, reducir ? 0 : (soloLeer ? 900 : 3400));
+      e.querySelector('[data-acc="cierra"]').addEventListener('click', function () {
+        if (soloLeer) { e.classList.remove('visible'); setTimeout(function () { e.remove(); }, 900); } else ultimoEco(e);
       });
     }
+
+    /* El último eco: la mariposa luminosa y el mapa completamente iluminado */
+    function ultimoEco(e) {
+      e.classList.remove('con-carta'); e.classList.add('eco');
+      const luz = crear('<div class="luz-mar"><i class="halo-luz"></i><div class="esc"><div class="mar"><b></b></div></div></div>'); e.appendChild(luz);
+      for (let i = 0; i < 7; i++) e.appendChild(crear(`<div class="luz-comp" style="--ox:${((i % 2 ? 1 : -1) * (14 + i * 9))}px;animation-delay:${(0.9 + i * 0.35).toFixed(2)}s"><div class="mar"><b style="animation-delay:${(-i * .13).toFixed(2)}s"></b></div></div>`));
+      const t0 = reducir ? 300 : 4200;
+      setTimeout(function () {
+        e.classList.add('sale'); animando = true;
+        irA(400, 1325, vistaGeneral(), reducir ? 0 : 3800);
+        iluminarMapa();
+      }, t0);
+      setTimeout(function () { e.remove(); animando = false; mostrarSello(); }, t0 + (reducir ? 200 : 3400));
+    }
+    function iluminarMapa() {
+      const ov = document.createElement('img'); ov.src = 'mapa-color.webp'; ov.className = 'ov-color'; ov.alt = ''; lienzo.insertBefore(ov, nodos);
+      requestAnimationFrame(function () { requestAnimationFrame(function () { ov.classList.add('on'); }); });
+      setTimeout(function () { estado.finalCompleto = true; guardar(); pintarTodo(); ov.remove(); }, reducir ? 100 : 4000);
+    }
+    function mostrarSello() {
+      if (el.querySelector('.sello-final')) return;
+      const s = crear(`<div class="sello-final"><p class="frase">«${D.fraseFinal}»</p><p class="titulo-app">${D.tituloFinal}</p><button type="button" class="x" aria-label="Ocultar mensaje">×</button></div>`);
+      el.appendChild(s);
+      s.querySelector('.x').addEventListener('click', function () { s.classList.add('oculto'); setTimeout(function () { s.remove(); }, 600); });
+    }
+
     function ventanaGuia() {
       if (todosDescubiertos() && !estado.finalAnunciado) return ventanaFinalAnuncio();
       const p = pendientes();
+      if (estado.finalCompleto) {
+        const m = modal(el, panelPj('hornet-senala', 118, `<p class="dialogo">«${D.dialogos.fin}»</p>${placa('VOLVER A LEER LA CARTA', 'carta')}${placa('ENTENDIDO', 'ok', 'suave')}`));
+        m.querySelector('[data-acc="ok"]').addEventListener('click', function () { cerrarModal(m); });
+        m.querySelector('[data-acc="carta"]').addEventListener('click', function () { cerrarModal(m, function () { escenaFinal(true); }); });
+        return;
+      }
       const m = modal(el, panelPj('hornet-senala', 118, `<p class="dialogo">«${p.length ? D.dialogos.guia : D.dialogos.fin}»</p>${placa('ENTENDIDO', 'ok')}`));
       m.querySelector('[data-acc="ok"]').addEventListener('click', function () { cerrarModal(m, function () { if (p.length) enfocarGuia(1100); }); });
     }
@@ -390,20 +494,24 @@
       z.addEventListener('pointerdown', ini); z.addEventListener('pointerup', parar); z.addEventListener('pointerleave', parar); z.addEventListener('pointercancel', parar);
       function abrir() {
         const NOM = { oculta: 'Oculta', disponible: 'Oculta', descubierta: 'Descubierta', completada: 'Completada' };
-        function filas() { return D.regiones.map((r) => `<div class="adm-fila"><span>${r.real}</span><button type="button" class="boton placa suave mini" data-id="${r.id}">${NOM[estadoDe(r.id)]}</button></div>`).join(''); }
+        function filas() { return D.regiones.filter((r) => r.id !== 'santuario').map((r) => `<div class="adm-fila"><span>${r.real}</span><button type="button" class="boton placa suave mini" data-id="${r.id}">${NOM[estadoDe(r.id)]}</button></div>`).join(''); }
         const m = modal(el, `<div class="panel admin"><h2>Administración</h2><p class="pista">Toca una región para cambiar su estado: oculta → descubierta → completada.</p>
-          <div id="admLista">${filas()}</div><div class="fila">${placa('DESCUBRIR TODAS (PRUEBA)', 'todas', 'suave')}${placa('REPETIR ESCENA FINAL', 'final', 'suave')}${placa('REPETIR MENSAJE INICIAL', 'intro', 'suave')}${placa('REINICIAR TODO', 'reset', 'suave')}${placa('CERRAR', 'cerrar')}</div></div>`);
+          <div id="admLista">${filas()}</div><div class="fila">${placa('DESCUBRIR TODAS (PRUEBA)', 'todas', 'suave')}${placa('REPETIR LA SECUENCIA FINAL', 'final', 'suave')}${placa('REPETIR MENSAJE INICIAL', 'intro', 'suave')}${placa('REINICIAR TODO', 'reset', 'suave')}${placa('CERRAR', 'cerrar')}</div></div>`);
         m.addEventListener('click', function (e) {
           const b = e.target.closest('button'); if (!b) return;
           if (b.dataset.id) {
             const id = b.dataset.id, st = estado.regiones[id];
             if (!st) { estado.regiones[id] = 'descubierta'; estado.fechas[id] = new Date().toISOString(); } else if (st === 'descubierta') estado.regiones[id] = 'completada'; else { delete estado.regiones[id]; delete estado.fechas[id]; }
             guardar(); pintarTodo(); pintarNodos(); m.querySelector('#admLista').innerHTML = filas();
-          } else if (b.dataset.acc === 'intro') { estado.introVista = false; guardar(); b.textContent = 'LISTO'; }
-          else if (b.dataset.acc === 'todas') { TODAS.forEach(function (id) { if (!estado.regiones[id]) { estado.regiones[id] = 'descubierta'; estado.fechas[id] = new Date().toISOString(); } }); guardar(); pintarTodo(); pintarNodos(); m.querySelector('#admLista').innerHTML = filas(); b.textContent = 'LISTO'; }
-          else if (b.dataset.acc === 'final') { estado.finalAnunciado = false; guardar(); cerrarModal(m, function () { if (todosDescubiertos()) ventanaFinalAnuncio(); }); }
+          } else if (b.dataset.acc === 'todas') { TODAS.forEach(function (id) { if (!estado.regiones[id]) { estado.regiones[id] = 'descubierta'; estado.fechas[id] = new Date().toISOString(); } }); guardar(); pintarTodo(); pintarNodos(); m.querySelector('#admLista').innerHTML = filas(); b.textContent = 'LISTO'; }
+          else if (b.dataset.acc === 'final') {
+            estado.finalAnunciado = false; estado.santuarioVisible = false; estado.finalCompleto = false; delete estado.regiones.santuario; delete estado.fechas.santuario; guardar();
+            pintarTodo(); pintarNodos(); const s = el.querySelector('.sello-final'); if (s) s.remove();
+            cerrarModal(m, function () { if (todosDescubiertos()) ventanaFinalAnuncio(); });
+          }
+          else if (b.dataset.acc === 'intro') { estado.introVista = false; guardar(); b.textContent = 'LISTO'; }
           else if (b.dataset.acc === 'reset') {
-            if (b.dataset.seguro) { estado = { regiones: {}, fechas: {}, introVista: false, finalAnunciado: false }; guardar(); pintarTodo(); pintarNodos(); m.querySelector('#admLista').innerHTML = filas(); b.textContent = 'REINICIADO'; delete b.dataset.seguro; }
+            if (b.dataset.seguro) { estado = nuevoEstado(); guardar(); pintarTodo(); pintarNodos(); const s = el.querySelector('.sello-final'); if (s) s.remove(); m.querySelector('#admLista').innerHTML = filas(); b.textContent = 'REINICIADO'; delete b.dataset.seguro; }
             else { b.dataset.seguro = '1'; b.textContent = 'TOCA OTRA VEZ PARA CONFIRMAR'; }
           } else if (b.dataset.acc === 'cerrar') cerrarModal(m);
         });
@@ -415,9 +523,11 @@
     cargarMapa().then(function () {
       if (!el.isConnected) return;
       pintarTodo(); listo = true; cv.classList.add('lista');
-      if (!introEstaSesion && pendientes().length) { introEstaSesion = true; setTimeout(function () { ventanaIntro(estado.introVista ? 'intro2' : 'intro1'); }, reducir ? 0 : 650); }
+      if (estado.finalCompleto) { irA(400, 1325, vistaGeneral(), 0); setTimeout(mostrarSello, 900); }
+      else if (estado.regiones.santuario) { setTimeout(function () { escenaFinal(false); }, 650); }
+      else if (todosDescubiertos() && !estado.finalAnunciado) { setTimeout(ventanaFinalAnuncio, reducir ? 0 : 650); }
+      else if (!introEstaSesion && pendientes().length) { introEstaSesion = true; setTimeout(function () { ventanaIntro(estado.introVista ? 'intro2' : 'intro1'); }, reducir ? 0 : 650); }
       else if (pendientes().length) enfocarGuia(0);
-      if (todosDescubiertos() && !estado.finalAnunciado) setTimeout(ventanaFinalAnuncio, reducir ? 0 : 650);
     });
   }
 

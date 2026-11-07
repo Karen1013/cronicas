@@ -92,8 +92,8 @@ img { -webkit-user-drag: none; user-select: none; }
 /* ===== Reino (mapa) ===== */
 .reino { position: fixed; left: 0; right: 0; top: 0; bottom: calc(var(--alto-nav) + var(--seg-inf)); overflow: hidden; }
 .mapa-vista { position: absolute; inset: 0; overflow: hidden; touch-action: none; background: #0a0f1c; cursor: grab; -webkit-user-select: none; user-select: none; }
-.mapa-lienzo { position: absolute; left: 0; top: 0; width: 800px; height: 1700px; transform-origin: 0 0; will-change: transform; backface-visibility: hidden; }
-.mapa-lienzo canvas { position: absolute; left: 0; top: 0; width: 800px; height: 1700px; opacity: 0; transition: opacity .9s ease; }
+.mapa-lienzo { position: absolute; left: 0; top: 0; width: 800px; height: 2400px; transform-origin: 0 0; will-change: transform; backface-visibility: hidden; }
+.mapa-lienzo canvas { position: absolute; left: 0; top: 0; width: 800px; height: 2400px; opacity: 0; transition: opacity .9s ease; }
 .mapa-lienzo canvas.lista { opacity: 1; }
 .nodos { position: absolute; inset: 0; }
 .nodo { position: absolute; width: 120px; height: 120px; padding: 0; border: 0; background: none; transform: translate(-50%, -50%); cursor: pointer; color: inherit; font: inherit; }
@@ -141,7 +141,7 @@ img { -webkit-user-drag: none; user-select: none; }
 @keyframes popEntra { from { opacity: 0; transform: translateX(-50%) translateY(30px) scale(.7); } to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } }
 @keyframes popSale { to { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(.96); } }
 .ilustracion { position: relative; height: 170px; margin: -2px -2px 14px; overflow: hidden; border: 1px solid var(--azul-gris); background: #07090f; }
-.ilustracion .crop { position: absolute; left: 50%; top: 50%; width: 720px; height: 1530px; background: url("mapa-color.webp") 0 0 / 100% 100% no-repeat; transform: translate(calc(var(--x) * -1), calc(var(--y) * -1)); }
+.ilustracion .crop { position: absolute; left: 50%; top: 50%; width: 720px; height: 2160px; background: url("mapa-color.webp") 0 0 / 100% 100% no-repeat; transform: translate(calc(var(--x) * -1), calc(var(--y) * -1)); }
 .panel.admin { max-height: 82dvh; overflow-y: auto; }
 .adm-fila { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(119,125,130,.25); font-size: 15px; }
 
@@ -174,3 +174,84 @@ img { -webkit-user-drag: none; user-select: none; }
 .panel.largo .dialogo-largo { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-right: 4px;
   -webkit-mask-image: linear-gradient(#000 85%, transparent); mask-image: linear-gradient(#000 85%, transparent); padding-bottom: 18px; }
 .panel.largo .boton { flex: none; margin-top: 10px; }
+
+/* ===== Último territorio: mariposas, niebla, escena de descanso, carta y sello final ===== */
+.ilustracion .foto { position: absolute; inset: 0; background-size: cover; background-position: 50% 40%; }
+.panel .pista + .pista { margin-top: 10px; }
+.panel.largo.alto { max-height: min(70dvh, 580px); }
+.panel.largo .fila { flex: none; display: grid; }
+.panel.largo .dialogo-largo > p { opacity: 1; animation: none; font-size: 17px; }
+.panel.largo .dialogo-largo > .nombre-real { text-align: center; }
+
+.mar { position: relative; width: 0; height: 0; animation: deriva var(--d, 8s) ease-in-out var(--r, 0s) infinite alternate; will-change: transform; }
+.mar b { position: absolute; left: -11px; top: -9px; width: 22px; height: 18px; animation: aletea .42s ease-in-out infinite alternate; }
+.mar b::before, .mar b::after { content: ""; position: absolute; top: 0; width: 10px; height: 16px; background: linear-gradient(135deg, #eef7ff, #9cc2f4); box-shadow: 0 0 9px 2px rgba(170,210,255,.55); }
+.mar b::before { left: 0; border-radius: 90% 10% 60% 40%; }
+.mar b::after { right: 0; border-radius: 10% 90% 40% 60%; }
+@keyframes aletea { from { transform: scaleX(1); } to { transform: scaleX(.3); } }
+@keyframes deriva { from { transform: translate(0, 0); } to { transform: translate(var(--dx, 30px), var(--dy, -40px)); } }
+.mar-pos { position: absolute; width: 0; height: 0; transform: scale(1.7); pointer-events: none; animation: entrar 2.6s ease both; }
+
+.ov-color { position: absolute; left: 0; top: 0; width: 800px; height: 2400px; opacity: 0; transition: opacity 3.6s ease; pointer-events: none; }
+.ov-color.on { opacity: 1; }
+
+/* Niebla y nubes (varias capas que se desplazan a distinta velocidad) */
+.niebla { position: absolute; inset: 0; z-index: 7; pointer-events: none; opacity: 0; overflow: hidden; }
+.niebla.cubre { opacity: 1; transition: opacity 2.3s ease; }
+.niebla.despeja { opacity: 0; transition: opacity 3.8s ease .2s; }
+.nb-base { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 58%, rgba(132,128,184,.82), rgba(70,68,124,.72) 72%); transition: opacity 2.6s ease; }
+.niebla.despeja .nb-base { opacity: 0; }
+.niebla .capa { position: absolute; left: 0; top: 0; width: calc(100% + var(--t)); height: 100%; background: url("niebla.webp") repeat; background-size: var(--t) calc(var(--t) / 2); will-change: transform; animation: desliza var(--v) linear infinite; }
+.niebla .c1 { --t: 1100px; --v: 52s; opacity: .95; }
+.niebla .c2 { --t: 760px; --v: 34s; opacity: .8; animation-direction: reverse; background-position: 0 180px; }
+.niebla .c3 { --t: 520px; --v: 22s; opacity: .85; background-position: 0 90px; }
+@keyframes desliza { from { transform: translate3d(0,0,0); } to { transform: translate3d(calc(var(--t) * -1),0,0); } }
+
+/* Escena de descanso */
+.escena-final { position: absolute; inset: 0; z-index: 9; overflow: hidden; background: #0b0e2a; opacity: 0; transition: opacity 1.4s ease; }
+.escena-final.visible { opacity: 1; }
+.escena-final.sale { opacity: 0; transition: opacity 3s ease; }
+.ef-fondo { position: absolute; inset: 0; background: url("santuario-escena.webp") center / cover no-repeat; }
+.ef-calida { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse at 50% 72%, rgba(255,196,120,.55), rgba(255,150,96,.22) 55%, rgba(255,140,90,0) 80%), linear-gradient(rgba(60,30,60,0), rgba(120,60,50,.22)); transition: opacity 6s ease 1s; }
+.escena-final.visible .ef-calida { opacity: 1; }
+.ef-mar { position: absolute; inset: 0; pointer-events: none; }
+.ms { position: absolute; width: 0; height: 0; opacity: 0; animation: subir var(--d, 10s) linear var(--r, 0s) infinite; }
+@keyframes subir { 0% { transform: translateY(0); opacity: 0; } 14% { opacity: .95; } 84% { opacity: .9; } 100% { transform: translateY(-340px); opacity: 0; } }
+.ef-pj { position: absolute; left: 50%; bottom: 25%; transform: translateX(-50%); transform-origin: 50% 100%; transition: transform 1.2s cubic-bezier(.3,.8,.3,1), bottom 1.2s cubic-bezier(.3,.8,.3,1); }
+.escena-final.con-carta .ef-pj { bottom: calc(58% + 6px); transform: translateX(-50%) scale(.56); }
+.ef-abrir { position: absolute; left: 50%; bottom: calc(var(--seg-inf) + 22px); width: min(86%, 360px); transform: translateX(-50%); opacity: 0; pointer-events: none; transition: opacity 1s ease; }
+.escena-final.listo .ef-abrir { opacity: 1; pointer-events: auto; }
+.ef-abrir.oculto { opacity: 0 !important; pointer-events: none !important; }
+.ef-carta { position: absolute; left: 12px; right: 12px; bottom: 12px; max-height: 58%; display: flex; flex-direction: column; padding: 18px 18px 18px; opacity: 0; pointer-events: none; transform: translateY(36px);
+  background: rgba(48,38,50,.93); border: 1px solid var(--oro); box-shadow: 0 10px 40px rgba(0,0,0,.6); transition: opacity .9s ease, transform .9s cubic-bezier(.2,.9,.3,1); }
+.ef-carta::before { content: ""; position: absolute; inset: 5px; border: 1px solid rgba(201,170,112,.3); pointer-events: none; }
+.escena-final.con-carta .ef-carta { opacity: 1; pointer-events: auto; transform: none; }
+.escena-final.eco .ef-carta { opacity: 0; transform: translateY(36px); transition: opacity 1s ease, transform 1s ease; pointer-events: none; }
+.ef-texto { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 2px 4px 14px 2px; -webkit-mask-image: linear-gradient(#000 88%, transparent); mask-image: linear-gradient(#000 88%, transparent); }
+.ef-texto p { margin: 0 0 12px; font-style: italic; font-size: 16.5px; color: #efe6d4; opacity: 0; animation: aparece .9s ease forwards; }
+.ef-texto .firma { text-align: right; margin-top: 8px; }
+.ef-texto .firma span { font-family: var(--titulos); font-style: normal; font-size: 21px; letter-spacing: .1em; color: var(--oro); }
+.ef-carta .boton { flex: none; max-width: none; margin-top: 10px; }
+
+/* Mariposa luminosa */
+.luz-mar { position: absolute; left: 50%; bottom: 36%; width: 0; height: 0; z-index: 3; opacity: 0; animation: vuelo 7.2s ease-in-out forwards; }
+.luz-mar .esc { transform: scale(2.4); }
+.halo-luz { position: absolute; left: -70px; top: -70px; width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle, rgba(220,238,255,.75), rgba(150,190,255,.25) 45%, transparent 70%); }
+@keyframes vuelo { 0% { transform: translate(0,0); opacity: 0; } 10% { opacity: 1; } 38% { transform: translate(46px,-130px); } 68% { transform: translate(-34px,-270px); } 100% { transform: translate(18px,-470px); opacity: 0; } }
+.luz-comp { position: absolute; left: calc(50% + var(--ox)); bottom: 34%; width: 0; height: 0; z-index: 3; opacity: 0; animation: vuelo2 6.8s ease-in-out forwards; }
+.luz-comp .mar { transform: scale(1.3); }
+@keyframes vuelo2 { 0% { transform: translate(0,0); opacity: 0; } 14% { opacity: .95; } 100% { transform: translate(calc(var(--ox) * .6), -420px); opacity: 0; } }
+
+/* Frase final: se queda visible mientras se contempla el mapa */
+.sello-final { position: absolute; left: 10px; right: 64px; top: calc(var(--seg-sup) + 12px); z-index: 6; padding: 12px 14px 10px; text-align: center; pointer-events: none;
+  background: linear-gradient(rgba(12,16,28,.88), rgba(12,16,28,.7)); border: 1px solid rgba(201,170,112,.55); animation: aparece 2.4s ease both; transition: opacity .6s ease; }
+.sello-final.oculto { opacity: 0; }
+.sello-final .frase { margin: 0 0 6px; font-style: italic; font-size: 16px; line-height: 1.35; }
+.sello-final .titulo-app { margin: 0; font-family: var(--titulos); font-size: 12px; letter-spacing: .18em; color: var(--oro); text-transform: uppercase; }
+.sello-final .x { position: absolute; right: 2px; top: 0; width: 38px; height: 38px; padding: 0; border: 0; background: none; color: var(--gris-claro); font-size: 22px; cursor: pointer; pointer-events: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mar, .mar b, .ms, .niebla .capa, .luz-mar, .luz-comp, .mar-pos, .ef-texto p, .sello-final { animation: none !important; }
+  .ms { opacity: .8; } .ef-texto p { opacity: 1; } .luz-mar, .luz-comp { opacity: 1; }
+  .niebla, .niebla.cubre, .niebla.despeja, .ov-color, .escena-final, .ef-calida, .ef-pj, .ef-carta, .ef-abrir { transition: none !important; }
+}
